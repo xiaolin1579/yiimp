@@ -145,6 +145,11 @@ static void client_do_submit(YAAMP_CLIENT *client, YAAMP_JOB *job, YAAMP_JOB_VAL
 	uint64_t coin_target = decode_compact(templ->nbits);
 	if (templ->nbits && !coin_target) coin_target = 0xFFFF000000000000ULL;
 
+        // please forgive me for this hack jebus
+        if (strstr(g_current_algo->name,"balloon") &&
+           (submitvalues->hash_bin[30] | submitvalues->hash_bin[31]))
+           coin_target = 0x0;
+
 	int block_size = YAAMP_SMALLBUFSIZE;
 	vector<string>::const_iterator i;
 
