@@ -24,9 +24,13 @@ struct YAAMP_JOB_TEMPLATE
 	int created;
 	char flags[64];
 
-	char prevhash_hex[1024];
-	char prevhash_be[1024];
+	char prevhash_hex[512];
+	char prevhash_be[512];
 
+	char extradata_hex[512];
+	char extradata_be[512];
+
+	// todo: can use extra field
 	char claim_hex[128];
 	char claim_be[128];
 

@@ -155,11 +155,13 @@ YAAMP_ALGO g_algos[] =
 	{"dmd-gr", groestl_hash, 0x100, 0, 0}, /* diamond (double groestl) */
 	{"myr-gr", groestlmyriad_hash, 1, 0, 0}, /* groestl + sha 64 */
 	{"skein", skein_hash, 1, 0, 0},
+	{"sonoa", sonoa_hash, 1, 0, 0},
 	{"tribus", tribus_hash, 1, 0, 0},
 	{"keccak", keccak256_hash, 0x80, 0, sha256_hash_hex },
 	{"keccakc", keccak256_hash, 0x100, 0, 0},
 	{"phi", phi_hash, 1, 0, 0},
 	{"phi2", phi2_hash, 0x100, 0, 0},
+
 	{"polytimos", polytimos_hash, 1, 0, 0},
 	{"skunk", skunk_hash, 1, 0, 0},
 
@@ -180,6 +182,7 @@ YAAMP_ALGO g_algos[] =
 	{"velvet", velvet_hash, 0x10000, 0, 0},
 	{"argon2", argon2_hash, 0x10000, 0, sha256_hash_hex },
 	{"vitalium", vitalium_hash, 1, 0, 0},
+	{"aergo", aergo_hash, 1, 0, 0},
 
 	{"sha256t", sha256t_hash, 1, 0, 0}, // sha256 3x
 

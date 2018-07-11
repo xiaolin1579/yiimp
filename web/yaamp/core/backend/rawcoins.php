@@ -13,6 +13,7 @@ function updateRawcoins()
 	exchange_set_default('empoex', 'disabled', true);
 	exchange_set_default('coinexchange', 'disabled', true);
 	exchange_set_default('coinsmarkets', 'disabled', true);
+	exchange_set_default('gateio', 'disabled', true);
 	exchange_set_default('jubi', 'disabled', true);
 	exchange_set_default('nova', 'disabled', true);
 	exchange_set_default('stocksexchange', 'disabled', true);
@@ -232,6 +233,22 @@ function updateRawcoins()
 				if ($base != 'BTC') continue;
 				$symbol = substr($ticker->symbol, 0, strlen($ticker->symbol)-3);
 				updateRawCoin('binance', $symbol);
+			}
+		}
+	}
+
+	if (!exchange_get('gateio', 'disabled')) {
+		$json = gateio_api_query('marketlist');
+		$list = arraySafeVal($json,'data');
+		if(!empty($list))
+		{
+			dborun("UPDATE markets SET deleted=true WHERE name='gateio'");
+			foreach($list as $item) {
+				if ($item['curr_b'] != 'BTC')
+					continue;
+				$symbol = trim(strtoupper($item['symbol']));
+				$name = trim($item['name']);
+				updateRawCoin('gateio', $symbol, $name);
 			}
 		}
 	}
