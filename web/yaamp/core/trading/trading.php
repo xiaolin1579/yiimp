@@ -78,6 +78,10 @@ function runExchange($exchangeName=false)
 				updateCryptopiaMarkets();
 				break;
 
+			case 'cryptobridge':
+				updateCryptoBridgeMarkets();
+				break;
+
 			case 'bitstamp':
 				getBitstampBalances();
 				break;
@@ -85,6 +89,10 @@ function runExchange($exchangeName=false)
 			case 'bittrex':
 				doBittrexTrading(true);
 				updateBittrexMarkets();
+				break;
+
+			case 'cexio':
+				getCexIoBalances();
 				break;
 
 			case 'c-cex':

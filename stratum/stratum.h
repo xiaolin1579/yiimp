@@ -19,6 +19,7 @@
 #include <mysql.h>
 #include <errmsg.h>
 #include <ifaddrs.h>
+#include <dirent.h>
 
 #include <iostream>
 #include <vector>
@@ -87,6 +88,17 @@ extern int g_stratum_max_ttf;
 extern bool g_stratum_reconnect;
 extern bool g_stratum_renting;
 extern bool g_stratum_segwit;
+extern int g_limit_txs_per_block;
+
+extern bool g_handle_haproxy_ips;
+extern int g_socket_recv_timeout;
+
+extern bool g_debuglog_client;
+extern bool g_debuglog_hash;
+extern bool g_debuglog_socket;
+extern bool g_debuglog_rpc;
+extern bool g_debuglog_list;
+extern bool g_debuglog_remote;
 
 extern uint64_t g_max_shares;
 extern uint64_t g_shares_counter;
@@ -134,12 +146,16 @@ void scrypt_N_R_1_256(const char* input, char* output, uint32_t N, uint32_t R, u
 void sha256_hash_hex(const char *input, char *output, unsigned int len);
 void sha256_double_hash_hex(const char *input, char *output, unsigned int len);
 
+#include "algos/a5a.h"
 #include "algos/c11.h"
 #include "algos/x11.h"
 #include "algos/x11evo.h"
+#include "algos/x12.h"
 #include "algos/x13.h"
 #include "algos/x14.h"
 #include "algos/x15.h"
+#include "algos/x16r.h"
+#include "algos/x16s.h"
 #include "algos/x17.h"
 #include "algos/xevan.h"
 #include "algos/hmq17.h"
@@ -148,12 +164,13 @@ void sha256_double_hash_hex(const char *input, char *output, unsigned int len);
 #include "algos/hsr14.h"
 #include "algos/quark.h"
 #include "algos/neoscrypt.h"
+#include "algos/allium.h"
 #include "algos/lyra2re.h"
 #include "algos/lyra2v2.h"
 #include "algos/lyra2z.h"
 #include "algos/blake.h"
 #include "algos/blakecoin.h"
-#include "algos/blake2.h"
+#include "algos/blake2s.h"
 #include "algos/qubit.h"
 #include "algos/groestl.h"
 #include "algos/jha.h"
@@ -179,9 +196,13 @@ void sha256_double_hash_hex(const char *input, char *output, unsigned int len);
 #include "algos/sib.h"
 #include "algos/m7m.h"
 #include "algos/phi.h"
+#include "algos/phi2.h"
 #include "algos/polytimos.h"
+#include "algos/sonoa.h"
 #include "algos/tribus.h"
 #include "algos/veltor.h"
 #include "algos/velvet.h"
 #include "algos/argon2a.h"
+#include "algos/vitalium.h"
+#include "algos/aergo.h"
 

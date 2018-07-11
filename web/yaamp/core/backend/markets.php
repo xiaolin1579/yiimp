@@ -13,6 +13,9 @@ function BackendPricesUpdate()
 	updateBittrexMarkets();
 	updatePoloniexMarkets();
 	updateBleutradeMarkets();
+	updateCryptoBridgeMarkets();
+	updateGateioMarkets();
+	updateGraviexMarkets();
 	updateKrakenMarkets();
 	updateKuCoinMarkets();
 	updateCCexMarkets();
@@ -22,6 +25,7 @@ function BackendPricesUpdate()
 	updateAlcurexMarkets();
 	updateBinanceMarkets();
 	updateBterMarkets();
+	updateCryptohubMarkets();
 	//updateEmpoexMarkets();
 	updateJubiMarkets();
 	updateLiveCoinMarkets();
@@ -219,6 +223,9 @@ function updateBleutradeMarkets()
 	$exchange = 'bleutrade';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
+
 	$list = bleutrade_api_query('public/getcurrencies');
 	if(!is_object($list)) return;
 
@@ -283,10 +290,150 @@ function updateBleutradeMarkets()
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
+function updateCryptoBridgeMarkets($force = false)
+{
+	$exchange = 'cryptobridge';
+	if (exchange_get($exchange, 'disabled')) return;
+
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
+
+	$result = cryptobridge_api_query('ticker');
+	if(!is_array($result)) return;
+
+	foreach($result as $ticker)
+	{
+		if (is_null(objSafeVal($ticker,'id'))) continue;
+		$pairs = explode('_', $ticker->id);
+		$symbol = reset($pairs); $base = end($pairs);
+		if($symbol == 'BTC' || $base != 'BTC') continue;
+
+		if (market_get($exchange, $symbol, "disabled")) {
+			$market->disabled = 1;
+			$market->message = 'disabled from settings';
+		}
+
+		$coin = getdbosql('db_coins', "symbol='{$symbol}'");
+		if(!$coin) continue;
+		if(!$coin->installed && !$coin->watch) continue;
+
+		$market = getdbosql('db_markets', "coinid={$coin->id} and name='{$exchange}'");
+		if(!$market) continue;
+
+		$price2 = ($ticker->bid + $ticker->ask)/2;
+		$market->price2 = AverageIncrement($market->price2, $price2);
+		$market->price = AverageIncrement($market->price, $ticker->bid);
+		$market->pricetime = time();
+		$market->priority = -1;
+		$market->txfee = 0.2; // trade pct
+		$market->save();
+
+		//debuglog("$exchange: update $symbol: {$market->price} {$market->price2}");
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+function updateGateioMarkets($force = false)
+{
+	$exchange = 'gateio';
+	if (exchange_get($exchange, 'disabled')) return;
+
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
+	$markets = gateio_api_query('tickers');
+	if(!is_array($markets)) return;
+
+	foreach($list as $market)
+	{
+		$coin = getdbo('db_coins', $market->coinid);
+		if(!$coin) continue;
+
+		$symbol = $coin->getOfficialSymbol();
+		if (market_get($exchange, $symbol, "disabled")) {
+			$market->disabled = 1;
+			$market->message = 'disabled from settings';
+			$market->save();
+			continue;
+		}
+
+		$dbpair = strtolower($symbol).'_btc';
+		foreach ($markets as $pair => $ticker) {
+			if ($pair != $dbpair) continue;
+			$price2 = (doubleval($ticker['highestBid']) + doubleval($ticker['lowestAsk'])) / 2;
+			$market->price = AverageIncrement($market->price, doubleval($ticker['highestBid']));
+			$market->price2 = AverageIncrement($market->price2, $price2);
+			$market->pricetime = time();
+			$market->priority = -1;
+			$market->txfee = 0.2; // trade pct
+			$market->save();
+
+			if (empty($coin->price2)) {
+				$coin->price = $market->price;
+				$coin->price2 = $market->price2;
+				$coin->market = $exchange;
+				$coin->save();
+			}
+		}
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+function updateGraviexMarkets($force = false)
+{
+	$exchange = 'graviex';
+	if (exchange_get($exchange, 'disabled')) return;
+
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
+	$markets = graviex_api_query('tickers');
+	if(!is_array($markets)) return;
+
+	foreach($list as $market)
+	{
+		$coin = getdbo('db_coins', $market->coinid);
+		if(!$coin) continue;
+
+		$symbol = $coin->getOfficialSymbol();
+		if (market_get($exchange, $symbol, "disabled")) {
+			$market->disabled = 1;
+			$market->message = 'disabled from settings';
+			$market->save();
+			continue;
+		}
+
+		$symbol = strtolower($symbol);
+		$dbpair = $symbol.'btc';
+		foreach ($markets as $pair => $ticker) {
+			if ($pair != $dbpair) continue;
+			$price2 = ($ticker['ticker']['buy']+$ticker['ticker']['sell'])/2;
+			$market->price = AverageIncrement($market->price, $ticker['ticker']['buy']);
+			$market->price2 = AverageIncrement($market->price2, $price2);
+			$market->pricetime = time();
+			$market->save();
+
+			if (empty($coin->price2)) {
+				$coin->price = $market->price;
+				$coin->price2 = $market->price2;
+				$coin->market = $exchange;
+				$coin->save();
+			}
+		}
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
 function updateKrakenMarkets($force = false)
 {
 	$exchange = 'kraken';
 	if (exchange_get($exchange, 'disabled')) return;
+
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
 
 	$result = kraken_api_query('AssetPairs');
 	if(!is_array($result)) return;
@@ -351,6 +498,9 @@ function updateBittrexMarkets($force = false)
 {
 	$exchange = 'bittrex';
 	if (exchange_get($exchange, 'disabled')) return;
+
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
 
 	$list = bittrex_api_query('public/getcurrencies');
 	if(!is_object($list)) return;
@@ -431,6 +581,9 @@ function updateCCexMarkets()
 {
 	$exchange = 'c-cex';
 	if (exchange_get($exchange, 'disabled')) return;
+
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
 
 	$ccex = new CcexAPI;
 	$list = $ccex->getMarketSummaries();
@@ -519,6 +672,9 @@ function updatePoloniexMarkets()
 	$exchange = 'poloniex';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
+
 	$poloniex = new poloniex;
 
 	$tickers = $poloniex->get_ticker();
@@ -603,6 +759,9 @@ function updateYobitMarkets()
 {
 	$exchange = 'yobit';
 	if (exchange_get($exchange, 'disabled')) return;
+
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
 
 	$res = yobit_api_query('info');
 	if(!is_object($res)) return;
@@ -689,10 +848,12 @@ function updateJubiMarkets()
 	$exchange = 'jubi';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$btc = jubi_api_query('ticker', "?coin=btc");
 	if(!is_object($btc)) return;
 
-	$list = getdbolist('db_markets', "name='jubi'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -734,10 +895,12 @@ function updateAlcurexMarkets()
 	$exchange = 'alcurex';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$data = alcurex_api_query('market', "?info=on");
 	if(!is_object($data)) return;
 
-	$list = getdbolist('db_markets', "name='$exchange'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -786,10 +949,12 @@ function updateCryptopiaMarkets()
 	$exchange = 'cryptopia';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$data = cryptopia_api_query('GetMarkets', 24);
 	if(!is_object($data)) return;
 
-	$list = getdbolist('db_markets', "name LIKE('$exchange%')");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -1046,10 +1211,12 @@ function updateBinanceMarkets()
 	$exchange = 'binance';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$tickers = binance_api_query('ticker/allBookTickers');
 	if(!is_array($tickers)) return;
 
-	$list = getdbolist('db_markets', "name='$exchange'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -1088,10 +1255,12 @@ function updateBterMarkets()
 	$exchange = 'bter';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$markets = bter_api_query('tickers');
 	if(!is_array($markets)) return;
 
-	$list = getdbolist('db_markets', "name='$exchange'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -1124,15 +1293,61 @@ function updateBterMarkets()
 	}
 }
 
+function updateCryptohubMarkets()
+{
+	$exchange = 'cryptohub';
+	if (exchange_get($exchange, 'disabled')) return;
+
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
+	$markets = cryptohub_api_query('market/ticker');
+	if(!is_array($markets)) return;
+
+	foreach($list as $market)
+	{
+		$coin = getdbo('db_coins', $market->coinid);
+		if(!$coin) continue;
+
+		$symbol = $coin->getOfficialSymbol();
+		if (market_get($exchange, $symbol, "disabled")) {
+			$market->disabled = 1;
+			$market->message = 'disabled from settings';
+			$market->save();
+			continue;
+		}
+
+		$dbpair = 'BTC'.'_'.$symbol;
+		foreach ($markets as $pair => $ticker) {
+			if ($pair != $dbpair) continue;
+			$price2 = ($ticker['highestBid']+$ticker['lowestAsk'])/2;
+			$market->price = AverageIncrement($market->price, $ticker['highestBid']);
+			$market->price2 = AverageIncrement($market->price2, $price2);
+			$market->pricetime = time();
+			//if ($market->disabled < 9) $market->disabled = (floatval($ticker['baseVolume']) < 0.01);
+			$market->save();
+
+			if (empty($coin->price2)) {
+				$coin->price = $market->price;
+				$coin->price2 = $market->price2;
+				$coin->market = $exchange;
+				$coin->save();
+			}
+		}
+	}
+}
+
 function updateEmpoexMarkets()
 {
 	$exchange = 'empoex';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$markets = empoex_api_query('marketinfo');
 	if(!is_array($markets)) return;
 
-	$list = getdbolist('db_markets', "name='$exchange'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -1173,6 +1388,9 @@ function updateKuCoinMarkets()
 	$exchange = 'kucoin';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$markets = kucoin_api_query('open/symbols','market=BTC');
 	if(!kucoin_result_valid($markets) || empty($markets->data)) return;
 
@@ -1181,7 +1399,6 @@ function updateKuCoinMarkets()
 		$coininfo = NULL;
 	}
 
-	$list = getdbolist('db_markets', "name='$exchange'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -1230,10 +1447,12 @@ function updateLiveCoinMarkets()
 	$exchange = 'livecoin';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$markets = livecoin_api_query('exchange/ticker');
 	if(!is_array($markets)) return;
 
-	$list = getdbolist('db_markets', "name='$exchange'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
@@ -1298,6 +1517,9 @@ function updateCoinExchangeMarkets()
 {
 	$exchange = 'coinexchange';
 	if (exchange_get($exchange, 'disabled')) return;
+
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
 
 	$list = coinexchange_api_query('getmarkets');
 	if(!is_object($list)) return;
@@ -1370,6 +1592,9 @@ function updateCoinsMarketsMarkets()
 	$exchange = 'coinsmarkets';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
+
 	$list = coinsmarkets_api_query('apicoin');
 	if(empty($list) || !is_array($list)) return;
 	foreach($list as $pair=>$data)
@@ -1427,6 +1652,9 @@ function updateStocksExchangeMarkets()
 	$exchange = 'stocksexchange';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
+
 	$list = stocksexchange_api_query('ticker');
 	if(empty($list) || !is_array($list)) return;
 	foreach($list as $m)
@@ -1473,6 +1701,9 @@ function updateTradeSatoshiMarkets()
 {
 	$exchange = 'tradesatoshi';
 	if (exchange_get($exchange, 'disabled')) return;
+
+	$count = (int) dboscalar("SELECT count(id) FROM markets WHERE name LIKE '$exchange%'");
+	if ($count == 0) return;
 
 	$data = tradesatoshi_api_query('getmarketsummaries');
 	if(!is_object($data) || !$data->success || !is_array($data->result)) return;
@@ -1521,10 +1752,12 @@ function updateShapeShiftMarkets()
 	$exchange = 'shapeshift';
 	if (exchange_get($exchange, 'disabled')) return;
 
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
 	$markets = shapeshift_api_query('marketinfo');
 	if(!is_array($markets) || empty($markets)) return;
 
-	$list = getdbolist('db_markets', "name='$exchange'");
 	foreach($list as $market)
 	{
 		$coin = getdbo('db_coins', $market->coinid);
