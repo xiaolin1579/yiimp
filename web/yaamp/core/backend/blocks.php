@@ -310,12 +310,16 @@ function BackendBlockFind2($coinid = NULL)
 		if($coin->symbol == 'BTC') continue;
 		$remote = new WalletRPC($coin);
 
+		$timerpc = microtime(true);
 		$mostrecent = 0;
 		if(empty($coin->lastblock)) $coin->lastblock = '';
 		$list = $remote->listsinceblock($coin->lastblock);
+		$rpcdelay = microtime(true) - $timerpc;
+		if ($rpcdelay > 0.5)
+			screenlog(__FUNCTION__.": {$coin->symbol} listsinceblock took ".round($rpcdelay,3)." sec, ".
+				(is_array($list) ? count($list) : 0). "txs");
 		if(!$list) continue;
 
-//		debuglog("find2 $coin->symbol");
 		foreach($list['transactions'] as $transaction)
 		{
 			if(!isset($transaction['blockhash'])) continue;
@@ -387,8 +391,7 @@ function BackendBlockFind2($coinid = NULL)
 
 	$d1 = microtime(true) - $t1;
 	controller()->memcache->add_monitoring_function(__FUNCTION__, $d1);
-	//debuglog(__FUNCTION__." took ".round($d1,3)." sec");
-	screenlog(__FUNCTION__.": took ".round($d1,3)." sec");
+	if ($d1 > 3.0) screenlog(__FUNCTION__.": took ".round($d1,3)." sec");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////

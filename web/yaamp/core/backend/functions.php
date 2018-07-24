@@ -6,7 +6,7 @@ function screenlog($line)
 {
 	$app = Yii::app();
 	if ($app instanceof CYiimpConsoleApp) {
-		$date = date('y-m-d h:i:s');
+		$date = date('y-m-d H:i:s');
 		echo("$date $line\n");
 	}
 }
