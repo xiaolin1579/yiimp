@@ -10,8 +10,7 @@ function yaamp_get_algos()
 		'scryptn',
 		'allium',
 		'argon2',
-    'balloon',
-  	'aergo',
+		'aergo',
 		'bastion',
 		'bitcore',
 		'blake',
@@ -156,7 +155,6 @@ function getAlgoColors($algo)
 		'argon2'	=> '#e0d0e0',
 		'aergo'		=> '#e0d0e0',
 		'bastion'	=> '#e0b0b0',
-                'balloon'       => '#c0c0c0',
 		'blake'		=> '#f0f0f0',
 		'blakecoin'	=> '#f0f0f0',
 		'groestl'	=> '#d0a0a0',
@@ -275,7 +273,6 @@ function getAlgoPort($algo)
 		'skunk'		=> 8433,
 		'tribus'	=> 8533,
 	        'a5a'   	=> 8633,
-                'balloon'       => 5100,
 	);
 
 	global $configCustomPorts;
