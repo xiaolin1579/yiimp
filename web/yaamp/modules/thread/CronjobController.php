@@ -3,6 +3,12 @@
 require_once('serverconfig.php');
 require_once('yaamp/defaultconfig.php');
 
+function ld($string)
+{
+	$d = date('h:i:s');
+	echo("$d - $string\n");
+}
+
 class CronjobController extends CommonController
 {
 	private function monitorApache()
@@ -41,7 +47,7 @@ class CronjobController extends CommonController
 
 	public function actionRunBlocks()
 	{
-//		screenlog(__FUNCTION__);
+//		debuglog(__METHOD__);
 		set_time_limit(0);
 
 		$this->monitorApache();
@@ -49,6 +55,7 @@ class CronjobController extends CommonController
 		$last_complete = memcache_get($this->memcache->memcache, "cronjob_block_time_start");
 		if($last_complete+(5*60) < time())
 			dborun("update jobs set active=false");
+
 		BackendBlockFind1();
 		if(!memcache_get($this->memcache->memcache, 'balances_locked')) {
 			BackendClearEarnings();
@@ -58,12 +65,12 @@ class CronjobController extends CommonController
 		BackendBlocksUpdate();
 
 		memcache_set($this->memcache->memcache, "cronjob_block_time_start", time());
-//		screenlog(__FUNCTION__.' done');
+//		debuglog(__METHOD__);
 	}
 
 	public function actionRunLoop2()
 	{
-//		screenlog(__FUNCTION__);
+//		debuglog(__METHOD__);
 		set_time_limit(0);
 
 		$this->monitorApache();
@@ -92,7 +99,7 @@ class CronjobController extends CommonController
 		}
 
 		memcache_set($this->memcache->memcache, "cronjob_loop2_time_start", time());
-//		screenlog(__FUNCTION__.' done');
+//		debuglog(__METHOD__);
 	}
 
 	public function actionRun()

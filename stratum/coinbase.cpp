@@ -14,6 +14,24 @@ static void encode_tx_value(char *encoded, json_int_t value)
 		TX_VALUE(value, 32), TX_VALUE(value, 40), TX_VALUE(value, 48), TX_VALUE(value, 56));
 }
 
+static void job_pack_tx(YAAMP_COIND *coind, char *data, json_int_t amount, char *key)
+{
+	int ol = strlen(data);
+	char evalue[32];
+	encode_tx_value(evalue, amount);
+
+	sprintf(data+strlen(data), "%s", evalue);
+
+	if(coind->pos && !key)
+		sprintf(data+strlen(data), "2321%sac", coind->pubkey);
+
+	else
+		sprintf(data+strlen(data), "1976a914%s88ac", key? key: coind->script_pubkey);
+
+//	debuglog("pack tx %s\n", data+ol);
+//	debuglog("pack tx %lld\n", amount);
+}
+
 static void p2sh_pack_tx(YAAMP_COIND *coind, char *data, json_int_t amount, char *payee)
 {
 	char evalue[32];
@@ -25,29 +43,6 @@ static void p2sh_pack_tx(YAAMP_COIND *coind, char *data, json_int_t amount, char
 	strcat(data, evalue);
 	strcat(data, coinb2_len);
 	strcat(data, coinb2_part);
-}
-
-static void job_pack_tx(YAAMP_COIND *coind, char *data, json_int_t amount, char *key)
-{
-	int ol = strlen(data);
-	char evalue[32];
-
-	if(coind->p2sh_address && !key) {
-		p2sh_pack_tx(coind, data, amount, coind->script_pubkey);
-		return;
-	}
-
-	encode_tx_value(evalue, amount);
-	sprintf(data+strlen(data), "%s", evalue);
-
-	if(coind->pos && !key)
-		sprintf(data+strlen(data), "2321%sac", coind->pubkey);
-
-	else
-		sprintf(data+strlen(data), "1976a914%s88ac", key? key: coind->script_pubkey);
-
-//	debuglog("pack tx %s\n", data+ol);
-//	debuglog("pack tx %lld\n", amount);
 }
 
 void coinbase_aux(YAAMP_JOB_TEMPLATE *templ, char *aux_script)
@@ -223,92 +218,6 @@ void coinbase_create(YAAMP_COIND *coind, YAAMP_JOB_TEMPLATE *templ, json_value *
 		return;
 	}
 
-        // FXTC BEGIN
-        // charity reward with most recent masternodes rpc (DASH, SIB, MUE, DSR, GBX...)
-        if(coind->charity_percent && coind->hasmasternodes && !coind->oldmasternodes)
-        {
-                char script_dests[2048] = { 0 };
-                char script_payee[128] = { 0 };
-                char payees[4]; // addresses count
-                int npayees = (templ->has_segwit_txs) ? 2 : 1;
-                bool masternode_enabled = json_get_bool(json_result, "masternode_payments_enforced");
-                bool superblocks_enabled = json_get_bool(json_result, "superblocks_enabled");
-                json_value* superblock = json_get_array(json_result, "superblock");
-                json_value* masternode = json_get_object(json_result, "masternode");
-                if(!masternode && json_get_bool(json_result, "masternode_payments")) {
-                        coind->oldmasternodes = true;
-                        debuglog("%s is using old masternodes rpc keys\n", coind->symbol);
-                        return;
-                }
-                if(coind->charity_percent)
-                {
-                        char charity_payee[256] = { 0 };
-                        const char *payee = json_get_string(json_result, "payee");
-                        if (payee) snprintf(charity_payee, 255, "%s", payee);
-                        else sprintf(charity_payee, "%s", coind->charity_address);
-                        if (strlen(charity_payee) == 0)
-                                stratumlog("ERROR %s has no charity_address set!\n", coind->name);
-
-                        json_int_t charity_amount = (available * coind->charity_percent) / 100;
-                        npayees++;
-                        available -= charity_amount;
-                        coind->charity_amount = charity_amount;
-                        base58_decode(charity_payee, script_payee);
-                        job_pack_tx(coind, script_dests, charity_amount, script_payee);
-                }
-                if(superblocks_enabled && superblock) {
-                        for(int i = 0; i < superblock->u.array.length; i++) {
-                                const char *payee = json_get_string(superblock->u.array.values[i], "payee");
-                                json_int_t amount = json_get_int(superblock->u.array.values[i], "amount");
-                                if (payee && amount) {
-                                        npayees++;
-                                        available -= amount;
-                                        base58_decode(payee, script_payee);
-                                        // ======= uncomment if MAC will start using charity =======
-                                        //bool superblock_use_p2sh = (strcmp(coind->symbol, "MAC") == 0);
-                                        //if(superblock_use_p2sh) {
-                                        //        p2sh_pack_tx(coind, script_dests, amount, script_payee);
-                                        //} else {
-                                                job_pack_tx(coind, script_dests, amount, script_payee);
-                                        //}
-                                        //debuglog("%s superblock %s %u\n", coind->symbol, payee, amount);
-                                }
-                        }
-                }
-                if (masternode_enabled && masternode) {
-                        bool started = json_get_bool(json_result, "masternode_payments_started");
-                        const char *payee = json_get_string(masternode, "payee");
-                        json_int_t amount = json_get_int(masternode, "amount");
-                        if (payee && amount && started) {
-                                npayees++;
-                                available -= amount;
-                                base58_decode(payee, script_payee);
-                                // ======= uncomment if MAC will start using charity =======
-                                //bool masternode_use_p2sh = (strcmp(coind->symbol, "MAC") == 0);
-                                //if(masternode_use_p2sh) {
-                                //        p2sh_pack_tx(coind, script_dests, amount, script_payee);
-                                //} else {
-                                        job_pack_tx(coind, script_dests, amount, script_payee);
-                                //}
-                        }
-                }
-                sprintf(payees, "%02x", npayees);
-                strcat(templ->coinb2, payees);
-                if (templ->has_segwit_txs) strcat(templ->coinb2, commitment);
-                strcat(templ->coinb2, script_dests);
-                // ======= uncomment if MAC will start using charity =======
-                //if (coind->p2sh_address) { // "MAC 0.16"
-                //        p2sh_pack_tx(coind, templ->coinb2, available, coind->script_pubkey);
-                //} else {
-                        job_pack_tx(coind, templ->coinb2, available, NULL);
-                //}
-                strcat(templ->coinb2, "00000000"); // locktime
-                coind->reward = (double)available/100000000*coind->reward_mul;
-                //debuglog("%s %d dests %s\n", coind->symbol, npayees, script_dests);
-                return;
-        }
-        // FXTC END
-
 	// 2 txs are required on these coins, one for foundation (dev fees)
 	if(coind->charity_percent && !coind->hasmasternodes)
 	{
@@ -415,10 +324,11 @@ void coinbase_create(YAAMP_COIND *coind, YAAMP_JOB_TEMPLATE *templ, json_value *
 					available -= amount;
 					base58_decode(payee, script_payee);
 					bool superblock_use_p2sh = (strcmp(coind->symbol, "MAC") == 0);
-					if(superblock_use_p2sh)
+					if(superblock_use_p2sh) {
 						p2sh_pack_tx(coind, script_dests, amount, script_payee);
-					else
+					} else {
 						job_pack_tx(coind, script_dests, amount, script_payee);
+					}
 					//debuglog("%s superblock %s %u\n", coind->symbol, payee, amount);
 				}
 			}
@@ -432,17 +342,22 @@ void coinbase_create(YAAMP_COIND *coind, YAAMP_JOB_TEMPLATE *templ, json_value *
 				available -= amount;
 				base58_decode(payee, script_payee);
 				bool masternode_use_p2sh = (strcmp(coind->symbol, "MAC") == 0);
-				if(masternode_use_p2sh)
+				if(masternode_use_p2sh) {
 					p2sh_pack_tx(coind, script_dests, amount, script_payee);
-				else
+				} else {
 					job_pack_tx(coind, script_dests, amount, script_payee);
+				}
 			}
 		}
 		sprintf(payees, "%02x", npayees);
 		strcat(templ->coinb2, payees);
 		if (templ->has_segwit_txs) strcat(templ->coinb2, commitment);
 		strcat(templ->coinb2, script_dests);
-		job_pack_tx(coind, templ->coinb2, available, NULL);
+		if (coind->p2sh_address) { // "MAC 0.16"
+			p2sh_pack_tx(coind, templ->coinb2, available, coind->script_pubkey);
+		} else {
+			job_pack_tx(coind, templ->coinb2, available, NULL);
+		}
 		strcat(templ->coinb2, "00000000"); // locktime
 		coind->reward = (double)available/100000000*coind->reward_mul;
 		//debuglog("%s %d dests %s\n", coind->symbol, npayees, script_dests);
@@ -606,20 +521,7 @@ void coinbase_create(YAAMP_COIND *coind, YAAMP_JOB_TEMPLATE *templ, json_value *
 			strcat(templ->coinb2, "01");
 		}
 	}
-        // When Gulden is in phase 3 it is required that the miner deducts the witness subsidy from the reward, it instead gets paid to the witness.
-        else if(strcmp(coind->symbol, "NLG") == 0)
-        {
-            if (templ->has_pow2_witness_data)
-            {
-                  strcat(templ->coinb2, "03");
-                  //Below line is (probably) not necessary - uncomment this if your pool is earning the wrong subsidy in phase 3.
-                  //available -= templ->pow2_subsidy;
-            }
-            else
-            {
-                strcat(templ->coinb2, "01");
-            }
-        }
+
 	else if (templ->has_segwit_txs) {
 		strcat(templ->coinb2, "02");
 		strcat(templ->coinb2, commitment);
@@ -628,13 +530,6 @@ void coinbase_create(YAAMP_COIND *coind, YAAMP_JOB_TEMPLATE *templ, json_value *
 	}
 
 	job_pack_tx(coind, templ->coinb2, available, NULL);
-
-        // Append witness data after normal coinbase outputs - witness data is already hex encoded and already contains amounts.
-        if(strcmp(coind->symbol, "NLG") == 0 && templ->has_pow2_witness_data)
-        {
-            strcat(templ->coinb2, templ->pow2_aux_1);
-            strcat(templ->coinb2, templ->pow2_aux_2);
-        }
 
 	//if(coind->txmessage)
 	//	strcat(templ->coinb2, "00");

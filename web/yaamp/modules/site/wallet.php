@@ -141,10 +141,9 @@ foreach($recents as $addr)
 		$balance = $balance>0? "$balance BTC": '';
 
 	echo '<td align="right">'.$balance.'</td>';
-	
-	$delicon = $address == $addr ? '' : '<img src="/images/base/delete.png" onclick="javascript:drop_cookie(this);" style="cursor:pointer;"/>';
-	echo '<td style="width: 16px; max-width: 16px;">'.$delicon.'</td>';
-	
+	echo '<td style="width: 16px; max-width: 16px;">'.
+		'<img src="/images/base/delete.png" onclick="javascript:drop_cookie(this);" style="cursor:pointer;"/>'.
+	'</td>';
 	echo '</tr>';
 }
 

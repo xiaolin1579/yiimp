@@ -1,6 +1,5 @@
 <?php
 
-require_once('functions.php');
 require_once('blocks.php');
 require_once('coins.php');
 require_once('rawcoins.php');
