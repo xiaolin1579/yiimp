@@ -14,6 +14,7 @@ function BackendPricesUpdate()
 	updatePoloniexMarkets();
 	updateBleutradeMarkets();
 	updateCryptoBridgeMarkets();
+	updateGateioMarkets();
 	updateGraviexMarkets();
 	updateKrakenMarkets();
 	updateKuCoinMarkets();
@@ -328,6 +329,53 @@ function updateCryptoBridgeMarkets($force = false)
 		$market->save();
 
 		//debuglog("$exchange: update $symbol: {$market->price} {$market->price2}");
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+function updateGateioMarkets($force = false)
+{
+	$exchange = 'gateio';
+	if (exchange_get($exchange, 'disabled')) return;
+
+	$list = getdbolist('db_markets', "name LIKE '$exchange%'");
+	if (empty($list)) return;
+
+	$markets = gateio_api_query('tickers');
+	if(!is_array($markets)) return;
+
+	foreach($list as $market)
+	{
+		$coin = getdbo('db_coins', $market->coinid);
+		if(!$coin) continue;
+
+		$symbol = $coin->getOfficialSymbol();
+		if (market_get($exchange, $symbol, "disabled")) {
+			$market->disabled = 1;
+			$market->message = 'disabled from settings';
+			$market->save();
+			continue;
+		}
+
+		$dbpair = strtolower($symbol).'_btc';
+		foreach ($markets as $pair => $ticker) {
+			if ($pair != $dbpair) continue;
+			$price2 = (doubleval($ticker['highestBid']) + doubleval($ticker['lowestAsk'])) / 2;
+			$market->price = AverageIncrement($market->price, doubleval($ticker['highestBid']));
+			$market->price2 = AverageIncrement($market->price2, $price2);
+			$market->pricetime = time();
+			$market->priority = -1;
+			$market->txfee = 0.2; // trade pct
+			$market->save();
+
+			if (empty($coin->price2)) {
+				$coin->price = $market->price;
+				$coin->price2 = $market->price2;
+				$coin->market = $exchange;
+				$coin->save();
+			}
+		}
 	}
 }
 

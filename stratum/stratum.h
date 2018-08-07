@@ -198,11 +198,12 @@ void sha256_double_hash_hex(const char *input, char *output, unsigned int len);
 #include "algos/phi.h"
 #include "algos/phi2.h"
 #include "algos/polytimos.h"
+#include "algos/sonoa.h"
 #include "algos/tribus.h"
 #include "algos/veltor.h"
 #include "algos/velvet.h"
 #include "algos/argon2a.h"
 #include "algos/vitalium.h"
+#include "algos/balloon.h"
 #include "algos/aergo.h"
 
-#include "algos/hex.h"

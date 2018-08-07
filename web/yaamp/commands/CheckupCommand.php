@@ -188,7 +188,7 @@ class CheckupCommand extends CConsoleCommand
 				if (!empty($coin->image)) {
 					if (file_exists($this->basePath.$coin->image)) {
 						$data = file_get_contents($this->basePath.$coin->image);
-						if (strstr($data, "<script ")) {
+						if (strstr($data, "<script") || strstr($data, "<html")) {
 							unlink($this->basePath.$coin->image);
 							$coin->image = NULL;
 							$nbDropped += $coin->save();
