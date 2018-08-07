@@ -333,18 +333,6 @@ YAAMP_JOB_TEMPLATE *coind_create_template(YAAMP_COIND *coind)
 		}
 	}
 
-	const char *sc_root = json_get_string(json_result, "stateroot");
-	const char *sc_utxo = json_get_string(json_result, "utxoroot");
-	if (sc_root && sc_utxo) {
-		// LUX Smart Contracts, 144-bytes block headers
-		strcpy(&templ->extradata_hex[ 0], sc_root); // 32-bytes hash (64 in hexa)
-		strcpy(&templ->extradata_hex[64], sc_utxo); // 32-bytes hash too
-
-		// same weird byte order as previousblockhash field
-		ser_string_be2(sc_root, &templ->extradata_be[ 0], 8);
-		ser_string_be2(sc_utxo, &templ->extradata_be[64], 8);
-	}
-
 	if (strcmp(coind->rpcencoding, "DCR") == 0) {
 		decred_fix_template(coind, templ, json_result);
 	}
@@ -393,28 +381,6 @@ YAAMP_JOB_TEMPLATE *coind_create_template(YAAMP_COIND *coind)
 	txids.push_back("");
 
 	templ->has_segwit_txs = false;
-
-        templ->has_pow2_witness_data = false;
-
-        if (strcmp(coind->symbol, "NLG") == 0)
-        {
-
-            json_value* pow2_aux_1_val = json_get_val(json_result, "pow2_aux1");
-            json_value* pow2_aux_2_val = json_get_val(json_result, "pow2_aux2");
-            if (pow2_aux_1_val && json_is_string(pow2_aux_1_val) && pow2_aux_2_val && json_is_string(pow2_aux_2_val))
-            {
-                const char* pow2_aux_1 = json_get_string(json_result, "pow2_aux1");
-                const char* pow2_aux_2 = json_get_string(json_result, "pow2_aux2");
-                if(pow2_aux_1 && strlen(pow2_aux_1) && pow2_aux_2 && strlen(pow2_aux_2))
-                {
-                    strcpy(templ->pow2_aux_1, pow2_aux_1);
-                    strcpy(templ->pow2_aux_2, pow2_aux_2);
-                    templ->has_pow2_witness_data = true;
-                    templ->pow2_subsidy = json_get_int(json_result, "pow2_subsidy");
-                }
-            }
-        }
-
 
 	templ->has_filtered_txs = false;
 	templ->filtered_txs_fee = 0;

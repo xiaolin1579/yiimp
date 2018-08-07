@@ -120,7 +120,6 @@ YAAMP_ALGO g_algos[] =
 	{"x14", x14_hash, 1, 0, 0},
 	{"x15", x15_hash, 1, 0, 0},
 	{"x17", x17_hash, 1, 0, 0},
-        {"balloon", balloon_hash, 1, 0, 0},
 
 	{"x11evo", x11evo_hash, 1, 0, 0},
 	{"xevan", xevan_hash, 0x100, 0, 0},
@@ -155,13 +154,11 @@ YAAMP_ALGO g_algos[] =
 	{"dmd-gr", groestl_hash, 0x100, 0, 0}, /* diamond (double groestl) */
 	{"myr-gr", groestlmyriad_hash, 1, 0, 0}, /* groestl + sha 64 */
 	{"skein", skein_hash, 1, 0, 0},
-	{"sonoa", sonoa_hash, 1, 0, 0},
 	{"tribus", tribus_hash, 1, 0, 0},
 	{"keccak", keccak256_hash, 0x80, 0, sha256_hash_hex },
 	{"keccakc", keccak256_hash, 0x100, 0, 0},
 	{"phi", phi_hash, 1, 0, 0},
 	{"phi2", phi2_hash, 0x100, 0, 0},
-
 	{"polytimos", polytimos_hash, 1, 0, 0},
 	{"skunk", skunk_hash, 1, 0, 0},
 
@@ -191,6 +188,8 @@ YAAMP_ALGO g_algos[] =
 	{"whirlcoin", whirlpool_hash, 1, 0, sha256_hash_hex }, /* old sha merkleroot */
 	{"whirlpool", whirlpool_hash, 1, 0 }, /* sha256d merkleroot */
 	{"whirlpoolx", whirlpoolx_hash, 1, 0, 0},
+
+    {"hex", hex_hash, 0x100, 0, sha256_hash_hex },
 
 	{"", NULL, 0, 0},
 };
