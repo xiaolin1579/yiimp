@@ -16,9 +16,9 @@
 
 void phi2_hash(const char* input, char* output, uint32_t len)
 {
-	unsigned char _ALIGN(128) hash[64];
-	unsigned char _ALIGN(128) hashA[64];
-	unsigned char _ALIGN(128) hashB[64];
+	unsigned char _ALIGN(128) hash[128] = { 0 };
+	unsigned char _ALIGN(128) hashA[64] = { 0 };
+	unsigned char _ALIGN(128) hashB[64] = { 0 };
 
 	sph_cubehash512_context ctx_cubehash;
 	sph_jh512_context ctx_jh;
@@ -27,7 +27,7 @@ void phi2_hash(const char* input, char* output, uint32_t len)
 	sph_skein512_context ctx_skein;
 
 	sph_cubehash512_init(&ctx_cubehash);
-	sph_cubehash512(&ctx_cubehash, input, len);
+	sph_cubehash512(&ctx_cubehash, input, 80);
 	sph_cubehash512_close(&ctx_cubehash, (void*)hashB);
 
 	LYRA2(&hashA[ 0], 32, &hashB[ 0], 32, &hashB[ 0], 32, 1, 8, 8);

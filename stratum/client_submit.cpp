@@ -31,7 +31,7 @@ void build_submit_values(YAAMP_JOB_VALUES *submitvalues, YAAMP_JOB_TEMPLATE *tem
 #ifdef MERKLE_DEBUGLOG
 	printf("merkle root %s\n", merkleroot.c_str());
 #endif
-	if (!strcmp(g_stratum_algo, "lbry")) {
+	if (!strcmp(g_current_algo->name, "lbry")) {
 		sprintf(submitvalues->header, "%s%s%s%s%s%s%s", templ->version, templ->prevhash_be, submitvalues->merkleroot_be,
 			templ->claim_be, ntime, templ->nbits, nonce);
 		ser_string_be(submitvalues->header, submitvalues->header_be, 112/4);
