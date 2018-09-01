@@ -29,3 +29,5 @@ blake2s.o: blake2s.c
 
 clean:
 	rm *.o
+
+
