@@ -176,6 +176,20 @@ function updateRawcoins()
 			}
 		}
 	}
+	if (!exchange_get('escodex', 'disabled')) {
+		$list = escodex_api_query('ticker');
+		if(is_array($list) && !empty($list))
+		{
+			dborun("UPDATE markets SET deleted=true WHERE name='escodex'");
+			foreach($list as $ticker) {
+				$e = explode('_', $ticker->id);
+				if (strtoupper($e[1]) !== 'BTC')
+					continue;
+				$symbol = strtoupper($e[0]);
+				updateRawCoin('escodex', $symbol);
+			}
+		}
+	}
 
 	if (!exchange_get('hitbtc', 'disabled')) {
 		$list = hitbtc_api_query('symbols');
@@ -400,7 +414,7 @@ function updateRawCoin($marketname, $symbol, $name='unknown')
 			}
 		}
 
-		if (in_array($marketname, array('nova','askcoin','binance','coinexchange','coinsmarkets','cryptobridge','hitbtc'))) {
+		if (in_array($marketname, array('nova','askcoin','binance','coinexchange','coinsmarkets','cryptobridge','escodex','hitbtc'))) {
 			// don't polute too much the db with new coins, its better from exchanges with labels
 			return;
 		}
